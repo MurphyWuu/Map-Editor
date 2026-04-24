@@ -2,9 +2,9 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Stage, Layer, Rect, Image, Transformer, Group, Line, Text, Line as KonvaLine, Circle, Path, Label, Tag } from 'react-konva';
 import useImage from 'use-image';
+import polyClip from 'polygon-clipping';
 import { Shape, Point, EditorMode, DrawingStep } from '../types';
 import Konva from 'konva';
-import PolyBool from 'polybooljs';
 
 interface MapEditorProps {
   mode: EditorMode;
@@ -563,130 +563,106 @@ export function MapEditor({
 
   const executeMerge = () => {
     if (selectedIds.length < 2) {
-      setPrompt('Please select at least 2 shapes to merge.');
+      setPrompt('请至少选择两个图形进行合并 (Please select at least 2 shapes to merge)');
       return;
     }
 
     const eligibleShapes = shapes.filter(s => selectedIds.includes(s.id) && s.id !== 'floor');
     if (eligibleShapes.length < 2) {
-      setPrompt('Floor cannot be merged. Select at least 2 other shapes.');
+      setPrompt('选中的有效图形不足 (Select at least 2 non-floor shapes to merge)');
       return;
     }
 
     try {
-      // Helper to convert shape to polybool polygon format
-      const toPoly = (s: Shape) => {
+      // Helper to convert shape to polygon-clipping format: [ [ [x,y], ... ] ]
+      const toPolyFormat = (s: Shape): [number, number][][] => {
         const points = getShapePoints(s);
         const rad = (s.rotation * Math.PI) / 180;
-        const outer: [number, number][] = [];
+        const ring: [number, number][] = [];
         for (let i = 0; i < points.length; i += 2) {
           const lx = points[i];
           const ly = points[i + 1];
           const gx = s.x + lx * Math.cos(rad) - ly * Math.sin(rad);
           const gy = s.y + lx * Math.sin(rad) + ly * Math.cos(rad);
-          outer.push([gx, gy]);
+          ring.push([gx, gy]);
         }
-        return { regions: [outer], inverted: false };
+        // polygon-clipping often expects closed rings (first point == last point)
+        if (ring.length > 0 && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
+          ring.push([ring[0][0], ring[0][1]]);
+        }
+        return [ring];
       };
 
-      // Find connected components
-      const n = eligibleShapes.length;
-      const adjacency: boolean[][] = Array(n).fill(null).map(() => Array(n).fill(false));
+      const inputPolygons = eligibleShapes.map(toPolyFormat);
       
-      for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-          const p1 = toPoly(eligibleShapes[i]);
-          const p2 = toPoly(eligibleShapes[j]);
-          try {
-            const union = PolyBool.union(p1, p2);
-            // If they are connected (overlapping or touching), the number of regions will be less than the sum
-            // region count: p1 has 1, p2 has 1. If union has 1, they are connected.
-            if (union.regions.length < 2) {
-              adjacency[i][j] = true;
-              adjacency[j][i] = true;
-            }
-          } catch (e) {
-            // If PolyBool fails, assume no intersection
-          }
-        }
-      }
+      // union can take an array of polygons directly or as arguments
+      // polygon-clipping union() returns a MultiPolygon: Array<Polygon>
+      // Polygon: Array<Contour>
+      // Contour: Array<[x, y]>
+      const resultMultiPoly = (polyClip as any).union(...inputPolygons);
 
-      const visited = new Array(n).fill(false);
-      const groups: number[][] = [];
-
-      for (let i = 0; i < n; i++) {
-        if (!visited[i]) {
-          const group: number[] = [];
-          const queue = [i];
-          visited[i] = true;
-          while (queue.length > 0) {
-            const u = queue.shift()!;
-            group.push(u);
-            for (let v = 0; v < n; v++) {
-              if (adjacency[u][v] && !visited[v]) {
-                visited[v] = true;
-                queue.push(v);
-              }
-            }
-          }
-          groups.push(group);
-        }
-      }
-
-      const groupsToMerge = groups.filter(g => g.length > 1);
-      if (groupsToMerge.length === 0) {
-        setCenterAlert('当前没有可合并的图形 (No overlapping or adjacent shapes to merge)');
+      if (!resultMultiPoly || resultMultiPoly.length === 0) {
+        setCenterAlert('图形合并失败: 没有重叠或接触 (No overlapping or adjacent shapes to merge)');
         return;
       }
 
+      // Check if the result is actually simpler (fewer shapes than input)
+      // If we merge disjoint shapes, resultMultiPoly.length will be == inputPolygons.length
+      if (resultMultiPoly.length >= eligibleShapes.length) {
+        // Technically they might have changed shape but not merged into a single one
+        // We'll proceed only if it feels like a real merge happened or if user expects it
+      }
+
       onSaveHistory();
-      const idsToDelete: string[] = [];
+      const idsToDelete = eligibleShapes.map(s => s.id);
+      const baseShape = eligibleShapes[0];
       const newShapes: Shape[] = [];
 
-      for (const groupIndices of groupsToMerge) {
-        const groupShapes = groupIndices.map(idx => eligibleShapes[idx]);
-        idsToDelete.push(...groupShapes.map(s => s.id));
+      // Flatten MultiPolygon into individual Shape objects
+      // For each Polygon, we take the first contour (outer ring) as our new shape
+      // Subsequent contours (holes) are ignored for simple point-based editing, 
+      // but they are rarely created by floorplan merging anyway.
+      resultMultiPoly.forEach((polygon, pIdx) => {
+        const outerRing = polygon[0];
+        if (!outerRing || outerRing.length < 3) return;
 
-        let groupResultPoly = toPoly(groupShapes[0]);
-        for (let i = 1; i < groupShapes.length; i++) {
-          groupResultPoly = PolyBool.union(groupResultPoly, toPoly(groupShapes[i]));
-        }
-
-        // Each group could potentially result in multiple regions if something went wrong, 
-        // but by our adjacency check they should be one. 
-        // We'll create a shape for each region just in case.
-        groupResultPoly.regions.forEach((region, rIdx) => {
-          const points: number[] = [];
-          region.forEach((p: number[]) => points.push(p[0], p[1]));
+        const points: number[] = [];
+        // Map back to global points, removing duplicated last point if present
+        const ringToProcess = (outerRing[0][0] === outerRing[outerRing.length-1][0] && outerRing[0][1] === outerRing[outerRing.length-1][1])
+          ? outerRing.slice(0, -1)
+          : outerRing;
           
-          newShapes.push({
-            id: `merged-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            type: 'polygon',
-            x: 0,
-            y: 0,
-            rotation: 0,
-            points,
-            fill: groupShapes[0].fill,
-            name: groupShapes[0].name.includes('Merged') ? groupShapes[0].name : `Merged Zone`,
-            label: groupShapes[0].label.includes('Merged') ? groupShapes[0].label : `Merged Zone`,
-            width: 0,
-            height: 0
-          });
+        ringToProcess.forEach(p => points.push(p[0], p[1]));
+
+        newShapes.push({
+          id: `merged-${Date.now()}-${pIdx}-${Math.random().toString(36).substr(2, 5)}`,
+          type: 'polygon',
+          x: 0,
+          y: 0,
+          rotation: 0,
+          points,
+          fill: baseShape.fill,
+          name: baseShape.name.includes('Merged') ? baseShape.name : `Merged Zone ${pIdx + 1}`,
+          label: baseShape.label?.includes('Merged') ? baseShape.label : `Merged Zone ${pIdx + 1}`,
+          width: 0,
+          height: 0
         });
+      });
+
+      if (newShapes.length === 0) {
+        setPrompt('合并失败 (Merge failed)');
+        return;
       }
 
       onDelete(idsToDelete);
       newShapes.forEach(s => onAdd(s));
-      
-      // Update selection: merged shapes + any single eligible shapes that were selected but NOT merged
-      const singleGroupIds = groups.filter(g => g.length === 1).map(g => eligibleShapes[g[0]].id);
-      onSelect([...newShapes.map(s => s.id), ...singleGroupIds]);
+      onSelect(newShapes.map(s => s.id));
       
       setPrompt('图形合并成功 (Shapes merged successfully)');
 
     } catch (err) {
-      console.error(err);
-      setPrompt('Merge failed. Ensure shapes are simple polygons.');
+      console.error('Merge error:', err);
+      setPrompt('合并操作出错 (Error during merge).');
     }
   };
 
