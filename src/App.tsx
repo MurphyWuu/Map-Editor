@@ -51,7 +51,7 @@ export default function App() {
   const [mode, setMode] = useState<EditorMode>('select');
   const [shapes, setShapes] = useState<Shape[]>(INITIAL_SHAPES);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [prompt, setPrompt] = useState<string>('Welcome to Indoor Map Editor. Select a tool or an object to begin.');
+  const [prompt, setPrompt] = useState<string>('Welcome to MAP EDITOR DEMO. Select a tool or an object to begin.');
 
   // History state
   const [history, setHistory] = useState<{ 
