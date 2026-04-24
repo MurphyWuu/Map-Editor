@@ -37,7 +37,7 @@ const INITIAL_SHAPES: Shape[] = [
   // --- Right Side ---
   { id: 's-ini', type: 'rect', x: 650, y: 320, width: 100, height: 80, rotation: 0, fill: '#67c1cf', name: 'Shop', label: 'initial' },
   { id: 's-nike', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#67c1cf', name: 'Shop', points: [650, 430, 800, 430, 800, 550, 650, 550], label: 'NIKE KICKS LOUNGE' },
-  { id: 's-hey', type: 'rect', x: 615, y: 615, width: 220, height: 50, rotation: 0, fill: '#7d3f98', name: 'Shop', label: '喜茶' },
+  { id: 's-hey', type: 'rect', x: 615, y: 615, width: 220, height: 50, rotation: 0, fill: '#7d3f98', name: 'Shop', label: '喜茶', logo: 'https://avatars.githubusercontent.com/u/45314051?s=280&v=4' },
 
   // --- Bottom Line ---
   { id: 's-sb', type: 'rect', x: 195, y: 800, width: 120, height: 60, rotation: 0, fill: '#7d3f98', name: 'Shop', label: '星巴克' },
@@ -48,10 +48,10 @@ const INITIAL_SHAPES: Shape[] = [
 ];
 
 export default function App() {
-  const [mode, setMode] = useState<EditorMode>('edit');
+  const [mode, setMode] = useState<EditorMode>('select');
   const [shapes, setShapes] = useState<Shape[]>(INITIAL_SHAPES);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [prompt, setPrompt] = useState<string>('Welcome to Indoor Map Editor. Click "Add" to start drawing.');
+  const [prompt, setPrompt] = useState<string>('Welcome to Indoor Map Editor. Select a tool or an object to begin.');
 
   // History state
   const [history, setHistory] = useState<{ 

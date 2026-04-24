@@ -232,34 +232,115 @@ export function MapEditor({
     return false;
   };
 
-  const ShapeLogo = ({ logoUrl, textWidth, textHeight, textX, textY }: { logoUrl: string, textWidth: number, textHeight: number, textX: number, textY: number }) => {
-    const [img] = useImage(logoUrl, 'anonymous');
-    if (!img) return null;
-
-    // Scale to fit within the box while maintaining aspect ratio
-    const maxSize = Math.min(textWidth, textHeight) * 0.6;
-    let width = img.width;
-    let height = img.height;
-    const ratio = width / height;
-
-    if (ratio > 1) {
-      width = maxSize;
-      height = maxSize / ratio;
-    } else {
-      height = maxSize;
-      width = maxSize * ratio;
+  const ShapeLabelGroup = ({ 
+    logoUrl, 
+    label, 
+    x: containerX, 
+    y: containerY, 
+    width: containerWidth, 
+    height: containerHeight 
+  }: { 
+    logoUrl?: string, 
+    label: string, 
+    x: number, 
+    y: number, 
+    width: number, 
+    height: number 
+  }) => {
+    const [img] = useImage(logoUrl || '', 'anonymous');
+    const fontSize = logoUrl ? 9 : 10;
+    
+    if (!logoUrl || !img) {
+      return (
+        <Text
+          text={label}
+          x={containerX}
+          y={containerY}
+          width={containerWidth}
+          height={containerHeight}
+          fontSize={fontSize}
+          fontFamily="Inter"
+          fill="#FFFFFF"
+          align="center"
+          verticalAlign="middle"
+          listening={false}
+          fontStyle="bold"
+          opacity={1}
+          shadowColor="rgba(0,0,0,0.5)"
+          shadowBlur={4}
+          shadowOffset={{ x: 1, y: 1 }}
+          shadowOpacity={0.8}
+        />
+      );
     }
 
+    // Calculate logo size
+    const maxLogoWidth = containerWidth * 0.35;
+    const maxLogoHeight = containerHeight * 0.7;
+    let logoWidth = img.width;
+    let logoHeight = img.height;
+    const ratio = logoWidth / logoHeight;
+
+    if (logoWidth > maxLogoWidth) {
+      logoWidth = maxLogoWidth;
+      logoHeight = maxLogoWidth / ratio;
+    }
+    if (logoHeight > maxLogoHeight) {
+      logoHeight = maxLogoHeight;
+      logoWidth = maxLogoHeight * ratio;
+    }
+
+    const gap = 4;
+    // Estimate text width: average character width is roughly 60% of font size
+    const estimatedTextWidth = Math.min(containerWidth * 0.6, label.length * (fontSize * 0.65));
+    const totalContentWidth = logoWidth + gap + estimatedTextWidth;
+    
+    const startX = containerX + (containerWidth - totalContentWidth) / 2;
+    const logoY = containerY + (containerHeight - logoHeight) / 2;
+
     return (
-      <Image 
-        image={img}
-        x={textX + (textWidth - width) / 2}
-        y={textY + (textHeight - height) / 2 - 10} // Offset slightly up to make room for label
-        width={width}
-        height={height}
-        opacity={0.8}
-        listening={false}
-      />
+      <Group listening={false}>
+        {/* Logo background */}
+        <Rect
+          x={startX - 2}
+          y={logoY - 2}
+          width={logoWidth + 4}
+          height={logoHeight + 4}
+          fill="white"
+          cornerRadius={4}
+          shadowBlur={2}
+          shadowOpacity={0.1}
+          listening={false}
+        />
+        <Image 
+          image={img}
+          x={startX}
+          y={logoY}
+          width={logoWidth}
+          height={logoHeight}
+          opacity={1}
+          listening={false}
+        />
+        <Text
+          text={label}
+          x={startX + logoWidth + gap + 4}
+          y={containerY}
+          width={estimatedTextWidth}
+          height={containerHeight}
+          fontSize={fontSize}
+          fontFamily="Inter"
+          fill="#FFFFFF"
+          align="left"
+          verticalAlign="middle"
+          listening={false}
+          fontStyle="bold"
+          opacity={1}
+          shadowColor="rgba(0,0,0,0.5)"
+          shadowBlur={4}
+          shadowOffset={{ x: 1, y: 1 }}
+          shadowOpacity={0.8}
+        />
+      </Group>
     );
   };
 
@@ -1100,32 +1181,14 @@ export function MapEditor({
                 }
 
                 return (
-                  <Group listening={false}>
-                    {shape.logo && (
-                      <ShapeLogo 
-                        logoUrl={shape.logo}
-                        textX={textX}
-                        textY={textY}
-                        textWidth={textWidth}
-                        textHeight={textHeight}
-                      />
-                    )}
-                    <Text
-                      text={shape.label}
-                      x={textX}
-                      y={shape.logo ? textY + 15 : textY} // Shift text down if there is a logo
-                      width={textWidth}
-                      height={textHeight}
-                      fontSize={shape.logo ? 8 : 10}
-                      fontFamily="Inter"
-                      fill="#374151"
-                      align="center"
-                      verticalAlign="middle"
-                      listening={false}
-                      fontStyle="normal"
-                      opacity={0.9}
-                    />
-                  </Group>
+                  <ShapeLabelGroup 
+                    logoUrl={shape.logo}
+                    label={shape.label}
+                    x={textX}
+                    y={textY}
+                    width={textWidth}
+                    height={textHeight}
+                  />
                 );
               })()}
               {/* Vertex Handles & Other Select Overlays */}
