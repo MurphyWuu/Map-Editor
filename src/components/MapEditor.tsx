@@ -594,69 +594,102 @@ export function MapEditor({
       };
 
       const inputPolygons = eligibleShapes.map(toPolyFormat);
+      const n = eligibleShapes.length;
       
-      // union can take an array of polygons directly or as arguments
-      // polygon-clipping union() returns a MultiPolygon: Array<Polygon>
-      // Polygon: Array<Contour>
-      // Contour: Array<[x, y]>
-      const resultMultiPoly = (polyClip as any).union(...inputPolygons);
-
-      if (!resultMultiPoly || resultMultiPoly.length === 0) {
-        setCenterAlert('图形合并失败: 没有重叠或接触 (No overlapping or adjacent shapes to merge)');
-        return;
+      // Build adjacency matrix based on intersection/touching
+      const adj: boolean[][] = Array(n).fill(null).map(() => Array(n).fill(false));
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const u = (polyClip as any).union(inputPolygons[i], inputPolygons[j]);
+          // If union results in a single polygon, they are connected (overlapping or touching)
+          if (u.length === 1) {
+            adj[i][j] = adj[j][i] = true;
+          }
+        }
       }
 
-      // Check if the result is actually simpler (fewer shapes than input)
-      // If we merge disjoint shapes, resultMultiPoly.length will be == inputPolygons.length
-      if (resultMultiPoly.length >= eligibleShapes.length) {
-        // Technically they might have changed shape but not merged into a single one
-        // We'll proceed only if it feels like a real merge happened or if user expects it
+      // Find connected components
+      const visited = new Array(n).fill(false);
+      const components: number[][] = [];
+      for (let i = 0; i < n; i++) {
+        if (!visited[i]) {
+          const comp: number[] = [];
+          const queue = [i];
+          visited[i] = true;
+          while (queue.length > 0) {
+            const u = queue.shift()!;
+            comp.push(u);
+            for (let v = 0; v < n; v++) {
+              if (adj[u][v] && !visited[v]) {
+                visited[v] = true;
+                queue.push(v);
+              }
+            }
+          }
+          components.push(comp);
+        }
+      }
+
+      // Only proceed if at least one group has more than 1 shape
+      const mergeGroups = components.filter(g => g.length > 1);
+      if (mergeGroups.length === 0) {
+        setCenterAlert('当前没有可合并图形 (No overlapping or adjacent shapes to merge)');
+        return;
       }
 
       onSaveHistory();
-      const idsToDelete = eligibleShapes.map(s => s.id);
-      const baseShape = eligibleShapes[0];
+      const idsToDelete: string[] = [];
       const newShapes: Shape[] = [];
+      const finalSelectionIds: string[] = [];
 
-      // Flatten MultiPolygon into individual Shape objects
-      // For each Polygon, we take the first contour (outer ring) as our new shape
-      // Subsequent contours (holes) are ignored for simple point-based editing, 
-      // but they are rarely created by floorplan merging anyway.
-      resultMultiPoly.forEach((polygon, pIdx) => {
-        const outerRing = polygon[0];
-        if (!outerRing || outerRing.length < 3) return;
-
-        const points: number[] = [];
-        // Map back to global points, removing duplicated last point if present
-        const ringToProcess = (outerRing[0][0] === outerRing[outerRing.length-1][0] && outerRing[0][1] === outerRing[outerRing.length-1][1])
-          ? outerRing.slice(0, -1)
-          : outerRing;
+      for (const comp of components) {
+        if (comp.length > 1) {
+          // Merge this group
+          const polysInComp = comp.map(idx => inputPolygons[idx]);
+          const groupShapes = comp.map(idx => eligibleShapes[idx]);
+          const baseShape = groupShapes[0];
           
-        ringToProcess.forEach(p => points.push(p[0], p[1]));
+          idsToDelete.push(...groupShapes.map(s => s.id));
 
-        newShapes.push({
-          id: `merged-${Date.now()}-${pIdx}-${Math.random().toString(36).substr(2, 5)}`,
-          type: 'polygon',
-          x: 0,
-          y: 0,
-          rotation: 0,
-          points,
-          fill: baseShape.fill,
-          name: baseShape.name.includes('Merged') ? baseShape.name : `Merged Zone ${pIdx + 1}`,
-          label: baseShape.label?.includes('Merged') ? baseShape.label : `Merged Zone ${pIdx + 1}`,
-          width: 0,
-          height: 0
-        });
-      });
+          const resultMultiPoly = (polyClip as any).union(...polysInComp);
+          resultMultiPoly.forEach((polygon: any, pIdx: number) => {
+            const outerRing = polygon[0];
+            if (!outerRing || outerRing.length < 3) return;
 
-      if (newShapes.length === 0) {
-        setPrompt('合并失败 (Merge failed)');
-        return;
+            const points: number[] = [];
+            const ringToProcess = (outerRing[0][0] === outerRing[outerRing.length-1][0] && outerRing[0][1] === outerRing[outerRing.length-1][1])
+              ? outerRing.slice(0, -1)
+              : outerRing;
+              
+            ringToProcess.forEach((p: any) => points.push(p[0], p[1]));
+
+            const newShapeId = `merged-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            newShapes.push({
+              id: newShapeId,
+              type: 'polygon',
+              x: 0,
+              y: 0,
+              rotation: 0,
+              points,
+              fill: baseShape.fill,
+              name: baseShape.name.includes('Merged') ? baseShape.name : `Merged Zone`,
+              label: baseShape.label?.includes('Merged') ? baseShape.label : `Merged Zone`,
+              width: 0,
+              height: 0
+            });
+            finalSelectionIds.push(newShapeId);
+          });
+        } else {
+          // This shape is disjoint, keep it unchanged
+          finalSelectionIds.push(eligibleShapes[comp[0]].id);
+        }
       }
 
-      onDelete(idsToDelete);
+      if (idsToDelete.length > 0) {
+        onDelete(idsToDelete);
+      }
       newShapes.forEach(s => onAdd(s));
-      onSelect(newShapes.map(s => s.id));
+      onSelect(finalSelectionIds);
       
       setPrompt('图形合并成功 (Shapes merged successfully)');
 
