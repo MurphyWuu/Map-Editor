@@ -43,7 +43,7 @@ export function PropertiesPanel({ selectedShape, onUpdate, onClose }: Properties
       initial={{ x: 300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
-      className="fixed right-6 top-24 bottom-32 w-72 bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col"
+      className="fixed right-6 top-36 bottom-32 w-72 bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col"
     >
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <div className="flex items-center gap-2">

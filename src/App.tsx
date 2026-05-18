@@ -6,8 +6,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { MapEditor } from './components/MapEditor';
-import { PromptBar } from './components/PromptBar';
 import { PropertiesPanel } from './components/PropertiesPanel';
+import { Sidebar } from './components/Sidebar';
+import { TopHeader } from './components/TopHeader';
+import { FloorSelector, BottomActions, FloatingCompass } from './components/MainOverlay';
 import { EditorMode, Shape } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -144,6 +146,8 @@ export default function App() {
         setPrompt('Editing: Drag handles to resize or reposition selected shapes.');
       } else if (newMode === 'merge') {
         setPrompt('Merge: Select 2 or more overlapping shapes to merge them.');
+      } else if (newMode === 'path') {
+        setPrompt('Path: Click to draw road network segments. Double click to finish.');
       }
     }
   };
@@ -186,53 +190,68 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIds, handleUndo, handleRedo, handleDeleteShapes]);
 
+  const [currentFloor, setCurrentFloor] = useState('L1');
+  const [isEditing, setIsEditing] = useState(false);
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#f1f5f9] text-slate-800 overflow-hidden font-sans relative">
-      {/* Grid Background Layer */}
-      <div className="absolute inset-0 opacity-20 grid-bg pointer-events-none" />
-
-      <Toolbar 
-        mode={mode} 
-        onToggleMode={toggleMode} 
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={history.past.length > 0}
-        canRedo={history.future.length > 0}
-      />
+    <div className="flex h-screen w-screen bg-[#f1f5f9] text-slate-800 overflow-hidden font-sans">
+      <Sidebar />
       
-      <main className="flex-1 relative overflow-hidden">
-        <MapEditor
-          mode={mode}
-          shapes={shapes}
-          selectedIds={selectedIds}
-          onSelect={handleSelect}
-          onAdd={handleAddShape}
-          onUpdate={handleUpdateShape}
-          onDelete={handleDeleteShapes}
-          onSaveHistory={() => saveToHistory(shapes, selectedIds)}
-          setPrompt={setPrompt}
-        />
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        <TopHeader />
         
-        {/* Viewport Info Overlay (matches design stats) */}
-        <div className="absolute bottom-8 left-8 flex items-center gap-6 text-[10px] uppercase tracking-wider text-slate-500 pointer-events-none font-mono">
-          <div className="flex gap-2"><span>MODE:</span> <span className="text-indigo-400 font-bold">{mode.toUpperCase()}</span></div>
-          <div className="flex gap-2"><span>ACTIVE:</span> <span className="text-slate-300">{selectedIds.length} ITEMS</span></div>
-        </div>
+        <main className="flex-1 relative overflow-hidden bg-[#f0f7ff]">
+          <div className="absolute top-0 left-0 right-0 z-50 p-6 pointer-events-none">
+            <div className="pointer-events-auto">
+              <Toolbar 
+                mode={mode} 
+                onToggleMode={toggleMode} 
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={history.past.length > 0}
+                canRedo={history.future.length > 0}
+                isEditing={isEditing}
+                onExit={() => {
+                  setPrompt(isEditing ? 'Changes relative to original state have been handled.' : 'Edit mode active.');
+                }}
+              />
+            </div>
+          </div>
 
-        <AnimatePresence>
-          <PromptBar text={prompt} />
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {selectedShape && (
-            <PropertiesPanel 
-              selectedShape={selectedShape} 
-              onUpdate={handleUpdateShape}
-              onClose={() => handleSelect([])}
-            />
+          <FloorSelector currentFloor={currentFloor} onFloorChange={setCurrentFloor} />
+          <BottomActions isEditing={isEditing} onMapEdit={() => setIsEditing(!isEditing)} />
+          
+          <MapEditor
+            mode={mode}
+            shapes={shapes}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onAdd={handleAddShape}
+            onUpdate={handleUpdateShape}
+            onDelete={handleDeleteShapes}
+            onSaveHistory={() => saveToHistory(shapes, selectedIds)}
+            setPrompt={setPrompt}
+          />
+          
+          {/* Viewport Info Overlay (matches design stats) */}
+          {isEditing && (
+            <div className="absolute bottom-8 right-32 flex items-center gap-6 text-[10px] uppercase tracking-wider text-slate-400 pointer-events-none font-mono">
+              <div className="flex gap-2"><span>MODE:</span> <span className="text-blue-500 font-bold">{mode.toUpperCase()}</span></div>
+              <div className="flex gap-2"><span>ACTIVE:</span> <span className="text-slate-400">{selectedIds.length} ITEMS</span></div>
+            </div>
           )}
-        </AnimatePresence>
-      </main>
+
+          <AnimatePresence>
+            {selectedShape && (
+              <PropertiesPanel 
+                selectedShape={selectedShape} 
+                onUpdate={handleUpdateShape}
+                onClose={() => handleSelect([])}
+              />
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
     </div>
   );
 }

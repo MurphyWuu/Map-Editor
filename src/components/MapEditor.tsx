@@ -30,17 +30,22 @@ export function MapEditor({
   setPrompt,
 }: MapEditorProps) {
   const stageRef = useRef<Konva.Stage>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    if (!containerRef.current) return;
+    
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      setWindowSize({ width, height });
+    });
+    
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   // Update scale and pos when they change
@@ -69,6 +74,7 @@ export function MapEditor({
   const [splitPath, setSplitPath] = useState<Point[]>([]); // Points in local space of target shape
   const [splittingShapeId, setSplittingShapeId] = useState<string | null>(null);
   const [hoveredSplitEdge, setHoveredSplitEdge] = useState<{ index: number, x: number, y: number, shapeId: string, isVertex?: boolean } | null>(null);
+  const [pathDrawPoints, setPathDrawPoints] = useState<Point[]>([]);
   // Center alert state
   const [centerAlert, setCenterAlert] = useState<string | null>(null);
 
@@ -130,13 +136,33 @@ export function MapEditor({
         handleDeleteVertex(hoveredVertex.shapeId, hoveredVertex.index);
         setHoveredVertex(null);
       }
+      if (e.key === 'Enter' && mode === 'path' && pathDrawPoints.length >= 2) {
+        onSaveHistory();
+        const pointsArr: number[] = [];
+        pathDrawPoints.forEach(p => pointsArr.push(p.x, p.y));
+        onAdd({
+          id: `path-${Date.now()}`,
+          type: 'path',
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          rotation: 0,
+          fill: 'transparent',
+          points: pointsArr,
+          name: 'Road Network',
+          label: ''
+        });
+        setPathDrawPoints([]);
+        setPrompt('Path added.');
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hoveredVertex, shapes]);
+  }, [hoveredVertex, shapes, mode, pathDrawPoints]);
 
   const getShapePoints = (shape: Shape): number[] => {
-    if (shape.type === 'polygon' && shape.points) return shape.points;
+    if ((shape.type === 'polygon' || shape.type === 'path') && shape.points) return shape.points;
     // For rect, return [x1, y1, x2, y2, x3, y3, x4, y4] relative to 0,0
     return [
       0, 0,
@@ -393,7 +419,9 @@ export function MapEditor({
     let closest = null;
     let minDist = Infinity;
 
-    for (let i = 0; i < n; i++) {
+    const numSegments = shape.type === 'path' ? n - 1 : n;
+
+    for (let i = 0; i < numSegments; i++) {
       const x1 = points[i * 2];
       const y1 = points[i * 2 + 1];
       const x2 = points[((i + 1) * 2) % points.length];
@@ -567,9 +595,9 @@ export function MapEditor({
       return;
     }
 
-    const eligibleShapes = shapes.filter(s => selectedIds.includes(s.id) && s.id !== 'floor');
+    const eligibleShapes = shapes.filter(s => selectedIds.includes(s.id) && s.id !== 'floor' && s.type !== 'path');
     if (eligibleShapes.length < 2) {
-      setPrompt('选中的有效图形不足 (Select at least 2 non-floor shapes to merge)');
+      setPrompt('选中的有效区域不足 (Select at least 2 non-floor zone shapes to merge)');
       return;
     }
 
@@ -760,7 +788,7 @@ export function MapEditor({
       for (const id of selectedIds) {
         if (id === 'floor') continue;
         const shape = shapes.find(s => s.id === id);
-        if (!shape) continue;
+        if (!shape || shape.type === 'path') continue;
         if (splittingShapeId && shape.id !== splittingShapeId) continue;
         
         const localMouse = getLocalMousePos(shape, mouse);
@@ -782,8 +810,8 @@ export function MapEditor({
       setHoveredSplitEdge(null);
     }
 
-    // Add mode snapping
-    if (mode === 'add') {
+    // Add mode snapping or Path mode snapping
+    if (mode === 'add' || mode === 'path') {
       const snapped = getSnappedPoint(mouse);
       setSnappedPoint(snapped);
     } else {
@@ -846,6 +874,10 @@ export function MapEditor({
         setSplittingShapeId(null);
         setSplitPath([]);
         setPrompt('Split cancelled.');
+      }
+      if (mode === 'path') {
+        setPathDrawPoints([]);
+        setPrompt('Path drawing cancelled.');
       }
       return;
     }
@@ -980,6 +1012,44 @@ export function MapEditor({
       return;
     }
 
+    if (mode === 'path') {
+      const mouse = getRelativePointerPosition();
+      const snapped = getSnappedPoint(mouse);
+      const point = snapped ? { x: snapped.x, y: snapped.y } : mouse;
+
+      // Finish drawing if clicked on the last point or very close to it
+      if (pathDrawPoints.length > 0) {
+        const lastPoint = pathDrawPoints[pathDrawPoints.length - 1];
+        const dist = Math.sqrt(Math.pow(point.x - lastPoint.x, 2) + Math.pow(point.y - lastPoint.y, 2));
+        if (dist < 10 && pathDrawPoints.length >= 2) {
+          // Finish
+          onSaveHistory();
+          const pointsArr: number[] = [];
+          pathDrawPoints.forEach(p => pointsArr.push(p.x, p.y));
+          onAdd({
+            id: `path-${Date.now()}`,
+            type: 'path',
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            fill: 'transparent',
+            points: pointsArr,
+            name: 'Road Network',
+            label: ''
+          });
+          setPathDrawPoints([]);
+          setPrompt('Path added.');
+          return;
+        }
+      }
+
+      setPathDrawPoints([...pathDrawPoints, point]);
+      setPrompt('绘制路网：点击确认下一个点，点击上一个点结束 (Path: Click next point, click last point to finish).');
+      return;
+    }
+
     if (clickedOnEmpty) {
       onSelect([]);
     }
@@ -1084,12 +1154,15 @@ export function MapEditor({
       case 'merge':
         if (selectedIds.length < 2) return '选择多个重叠图形进行合并';
         return '点击上方“合并”按钮开始';
+      case 'path':
+        if (pathDrawPoints.length === 0) return '点击画布设置路网起点';
+        return '点击画布增加路网节点，点击末尾节点或双击(Enter)完成';
     }
     return '';
   };
 
   return (
-    <div className="w-full h-full">
+    <div ref={containerRef} className="w-full h-full">
       <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex gap-2">
         {mode === 'merge' && (
           <button
@@ -1145,23 +1218,36 @@ export function MapEditor({
                   height={shape.height}
                   fill={shape.fill}
                   opacity={shape.fill === '#fdfaf4' ? 1 : 0.9}
-                  stroke={selectedIds.includes(shape.id) ? '#6366f1' : 'rgba(0,0,0,0.1)'}
+                  stroke={selectedIds.includes(shape.id) ? '#6366f1' : (shape.id === 'floor' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.1)')}
                   strokeWidth={selectedIds.includes(shape.id) ? 2 : 0.4}
                   onClick={(e) => handleShapeClick(e, shape.id)}
                   onTransformEnd={(e) => handleTransformEnd(e, shape.id)}
                   cornerRadius={shape.name === 'Kiosk' ? 100 : 0}
                 />
               ) : (
-                <Line
-                  points={shape.points || []}
-                  fill={shape.fill}
-                  opacity={0.9}
-                  closed={true}
-                  stroke={selectedIds.includes(shape.id) ? '#6366f1' : 'rgba(0,0,0,0.1)'}
-                  strokeWidth={selectedIds.includes(shape.id) ? 2 : 0.4}
-                  onClick={(e) => handleShapeClick(e, shape.id)}
-                  lineJoin="round"
-                />
+                <Group onClick={(e) => handleShapeClick(e, shape.id)}>
+                  {/* Invisible wide line for easier clicking */}
+                  {shape.type === 'path' && (
+                    <KonvaLine
+                      points={shape.points || []}
+                      stroke="transparent"
+                      strokeWidth={15}
+                      lineJoin="round"
+                      lineCap="round"
+                    />
+                  )}
+                  <KonvaLine
+                    points={shape.points || []}
+                    fill={shape.fill}
+                    opacity={shape.type === 'path' ? 0.6 : 0.9}
+                    closed={shape.type !== 'path'}
+                    stroke={selectedIds.includes(shape.id) ? '#6366f1' : (shape.type === 'path' ? '#94a3b8' : 'rgba(0,0,0,0.1)')}
+                    strokeWidth={selectedIds.includes(shape.id) ? (shape.type === 'path' ? 6 : 2) : (shape.type === 'path' ? 4 : 0.4)}
+                    lineJoin="round"
+                    lineCap="round"
+                    dash={shape.type === 'path' ? [8, 4] : undefined}
+                  />
+                </Group>
               )}
               {shape.label && (() => {
                 let textX = 0;
@@ -1174,8 +1260,8 @@ export function MapEditor({
                   textY = 0;
                   textWidth = shape.width;
                   textHeight = shape.height;
-                } else if (shape.type === 'polygon' && shape.points) {
-                  // Find bounding box center for polygon
+                } else if ((shape.type === 'polygon' || shape.type === 'path') && shape.points) {
+                  // Find bounding box center for polygon or path
                   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                   for (let i = 0; i < shape.points.length; i += 2) {
                     minX = Math.min(minX, shape.points[i]);
@@ -1428,6 +1514,33 @@ export function MapEditor({
               <Tag fill="rgba(0,0,0,0.7)" cornerRadius={4} padding={6} pointerDirection="top" pointerWidth={10} pointerHeight={10} lineJoin="round" />
               <Text text={getStepInstruction()} fill="white" fontSize={12} fontFamily="Inter" />
             </Label>
+          )}
+
+          {mode === 'path' && pathDrawPoints.length > 0 && (
+            <Group listening={false}>
+              {(() => {
+                const globalPoints: number[] = [];
+                pathDrawPoints.forEach(p => globalPoints.push(p.x, p.y));
+                const currentPoint = snappedPoint || mousePos;
+                if (currentPoint) {
+                  globalPoints.push(currentPoint.x, currentPoint.y);
+                }
+                return (
+                  <KonvaLine
+                    points={globalPoints}
+                    stroke="#6366f1"
+                    strokeWidth={4}
+                    opacity={0.5}
+                    lineJoin="round"
+                    lineCap="round"
+                    dash={[8, 4]}
+                  />
+                );
+              })()}
+              {pathDrawPoints.map((p, idx) => (
+                <Circle key={idx} x={p.x} y={p.y} radius={4} fill="#6366f1" />
+              ))}
+            </Group>
           )}
         </Layer>
       </Stage>

@@ -5,7 +5,7 @@ export type Point = {
 
 export type Shape = {
   id: string;
-  type: 'rect' | 'polygon';
+  type: 'rect' | 'polygon' | 'path';
   x: number;
   y: number;
   z?: number;
@@ -19,6 +19,6 @@ export type Shape = {
   points?: number[];
 };
 
-export type EditorMode = 'select' | 'add' | 'edit' | 'split' | 'merge';
+export type EditorMode = 'select' | 'add' | 'edit' | 'split' | 'merge' | 'path';
 
 export type DrawingStep = 0 | 1 | 2; // 0: Idle, 1: First point clicked, 2: Second point clicked (fixing length/rotation)

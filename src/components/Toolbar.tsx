@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, MousePointer2, Scissors, Combine, Undo2, Redo2 } from 'lucide-react';
+import { Plus, Edit2, MousePointer2, Scissors, Combine, Undo2, Redo2, Waypoints, RotateCcw, Upload, MoreVertical, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, ChevronDown, Check, X } from 'lucide-react';
 import { EditorMode } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -11,137 +11,195 @@ interface ToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  isEditing: boolean;
+  onExit: () => void;
 }
 
-function NavButton({ 
-  id, 
+function ModeButton({ 
   onClick, 
-  onMouseEnter, 
-  onMouseLeave, 
   active, 
-  tooltip, 
-  icon: Icon, 
-  label 
+  label,
+  icon: Icon,
+  className
 }: { 
-  id?: string, 
   onClick: () => void, 
-  onMouseEnter: (text: string) => void, 
-  onMouseLeave: () => void, 
   active?: boolean, 
-  tooltip: string, 
-  icon: any, 
-  label?: string 
+  label: string,
+  icon?: React.ElementType,
+  className?: string
 }) {
   return (
-    <div className="relative flex flex-col items-center">
-      <button
-        id={id}
-        onClick={onClick}
-        onMouseEnter={() => onMouseEnter(tooltip)}
-        onMouseLeave={onMouseLeave}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border border-transparent",
-          active 
-            ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-100" 
-            : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
-        )}
-      >
-        <Icon size={16} />
-        {label && <span>{label}</span>}
-      </button>
-    </div>
+    <button
+      onClick={onClick}
+      className={cn(
+        "px-3 h-9 flex items-center justify-center gap-1.5 rounded-lg border transition-all duration-200 font-medium text-sm whitespace-nowrap",
+        active 
+          ? "bg-blue-50 border-blue-200 text-blue-600 shadow-sm" 
+          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50",
+        className
+      )}
+    >
+      {Icon && <Icon size={16} className={cn(active ? "text-blue-600" : "text-slate-400")} />}
+      <span>{label}</span>
+    </button>
   );
 }
 
-export function Toolbar({ mode, onToggleMode, onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
+export function Toolbar({ mode, onToggleMode, onUndo, onRedo, canUndo, canRedo, isEditing, onExit }: ToolbarProps) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [viewOption, setViewOption] = useState('显示全图');
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-xl z-50">
-      <div className="flex items-center gap-1 pr-2 mr-2 border-r border-slate-200">
-        <div className="relative flex flex-col items-center">
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            onMouseEnter={() => setActiveTooltip("撤销 (Undo)")}
-            onMouseLeave={() => setActiveTooltip(null)}
-            className="p-2 rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-          >
-            <Undo2 size={18} />
-          </button>
+    <div className={cn(
+      "h-[60px] px-4 py-2 bg-white rounded-xl shadow-xl border border-slate-200/50 flex flex-nowrap items-center transition-all duration-300 pointer-events-auto",
+      isEditing ? "w-full gap-2" : "w-fit gap-4"
+    )}>
+      {/* Left Area: Project Name */}
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 px-3 h-9 border border-blue-500 rounded-lg bg-white min-w-[180px]">
+          <span className="text-sm font-bold text-slate-800 whitespace-nowrap">龙湖里</span>
+          <div className="flex items-center gap-3 text-slate-400 ml-auto pl-3 border-l border-slate-100">
+            <RotateCcw size={18} className="cursor-pointer hover:text-blue-500" />
+            <Upload size={18} className="cursor-pointer hover:text-blue-500" />
+            <MoreVertical size={18} className="cursor-pointer hover:text-blue-500" />
+          </div>
         </div>
-        <div className="relative flex flex-col items-center">
-          <button
-            onClick={onRedo}
-            disabled={!canRedo}
-            onMouseEnter={() => setActiveTooltip("重做 (Redo)")}
-            onMouseLeave={() => setActiveTooltip(null)}
-            className="p-2 rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-          >
-            <Redo2 size={18} />
+
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1 bg-[#f0f4ff] p-0.5 rounded-lg border border-slate-100">
+          <button className="p-1.5 text-slate-500 hover:text-slate-800 transition-colors">
+            <ZoomIn size={16} />
           </button>
+          <button className="p-1.5 text-slate-500 hover:text-slate-800 transition-colors">
+            <ZoomOut size={16} />
+          </button>
+          <div className="h-5 w-[1px] bg-slate-200 mx-0.5" />
+          <div className="relative">
+            <button 
+              onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+              className="flex items-center gap-2 px-2 h-7 bg-white border border-slate-200 rounded text-xs font-medium text-slate-700 min-w-[80px] whitespace-nowrap hover:bg-slate-50 transition-colors"
+            >
+              <span>{viewOption}</span>
+              <ChevronDown 
+                size={14} 
+                className={cn("ml-auto text-slate-400 transition-transform duration-200", isViewDropdownOpen && "rotate-180")} 
+              />
+            </button>
+
+            <AnimatePresence>
+              {isViewDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsViewDropdownOpen(false)} 
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden"
+                  >
+                    {['显示全图', '适合页面'].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => {
+                          setViewOption(opt);
+                          setIsViewDropdownOpen(false);
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-left text-xs hover:bg-blue-50 transition-colors",
+                          viewOption === opt ? "bg-blue-50 text-blue-600 font-bold" : "text-slate-600"
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
-      <NavButton 
-        id="btn-add"
-        onClick={() => onToggleMode('add')}
-        active={mode === 'add'}
-        tooltip="快捷创建矩形"
-        onMouseEnter={setActiveTooltip}
-        onMouseLeave={() => setActiveTooltip(null)}
-        icon={Plus}
-        label="增加 (Add)"
-      />
+      {isEditing && (
+        <>
+          <div className="w-[1px] h-8 bg-slate-100 mx-2 shrink-0" />
 
-      <NavButton 
-        id="btn-edit"
-        onClick={() => onToggleMode('edit')}
-        active={mode === 'edit'}
-        tooltip="移动/修改图形"
-        onMouseEnter={setActiveTooltip}
-        onMouseLeave={() => setActiveTooltip(null)}
-        icon={Edit2}
-        label="修改 (Edit)"
-      />
+          {/* Middle Area: Tools */}
+          <div className="flex items-center gap-2 shrink-0">
+            <ModeButton 
+              onClick={() => onToggleMode('add')} 
+              active={mode === 'add'} 
+              label="增加" 
+              icon={Plus}
+            />
+            <ModeButton 
+              onClick={() => onToggleMode('edit')} 
+              active={mode === 'edit'} 
+              label="编辑" 
+              icon={Edit2}
+            />
+            <ModeButton 
+              onClick={() => onToggleMode('split')} 
+              active={mode === 'split'} 
+              label="拆分" 
+              icon={Scissors}
+            />
+            <ModeButton 
+              onClick={() => onToggleMode('merge')} 
+              active={mode === 'merge'} 
+              label="合并" 
+              icon={Combine}
+            />
+            <ModeButton 
+              onClick={() => onToggleMode('path')} 
+              active={mode === 'path'} 
+              label="路网" 
+              icon={Waypoints}
+            />
+          </div>
 
-      <NavButton 
-        id="btn-split"
-        onClick={() => onToggleMode('split')}
-        active={mode === 'split'}
-        tooltip="拆分图形"
-        onMouseEnter={setActiveTooltip}
-        onMouseLeave={() => setActiveTooltip(null)}
-        icon={Scissors}
-        label="切割 (Split)"
-      />
+          <div className="w-[1px] h-8 bg-slate-100 mx-2 shrink-0" />
 
-      <NavButton 
-        id="btn-merge"
-        onClick={() => onToggleMode('merge')}
-        active={mode === 'merge'}
-        tooltip="合并重叠或相邻图形"
-        onMouseEnter={setActiveTooltip}
-        onMouseLeave={() => setActiveTooltip(null)}
-        icon={Combine}
-        label="合并 (Merge)"
-      />
-
-      {/* Global Tooltip Portal-like positioned relative to mouse or just logic */}
-      <AnimatePresence>
-        {activeTooltip && (
-          <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -2 }}
-            className="absolute top-full left-0 right-0 pt-2 pointer-events-none"
-          >
-            <div className="bg-slate-900 text-white text-xs font-semibold py-2 rounded-xl shadow-xl text-center border border-slate-800">
-              {activeTooltip}
+          {/* Right Area: History & Actions */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
+            <div className="flex items-center gap-1 mr-1">
+              <button 
+                onClick={onUndo} 
+                disabled={!canUndo}
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 disabled:opacity-20 hover:bg-slate-50 transition-all"
+              >
+                <ChevronLeft size={20} className="stroke-[3px]" />
+              </button>
+              <button 
+                onClick={onRedo} 
+                disabled={!canRedo}
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 disabled:opacity-20 hover:bg-slate-50 transition-all"
+              >
+                <ChevronRight size={20} className="stroke-[3px]" />
+              </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+            <div className="w-[1px] h-6 bg-slate-100 mx-1 shrink-0" />
+
+            <button 
+              onClick={onExit}
+              className="px-4 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 transition-all whitespace-nowrap"
+            >
+              取消
+            </button>
+            <button 
+              onClick={onExit}
+              className="px-4 h-9 rounded-lg border border-blue-500 bg-white text-blue-600 text-sm font-bold shadow-sm hover:bg-blue-50 transition-all whitespace-nowrap"
+            >
+              保存
+            </button>
+          </div>
+        </>
+      )}
     </div>
+
   );
 }
