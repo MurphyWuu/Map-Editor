@@ -36,14 +36,15 @@ export function FloorSelector({ currentFloor, onFloorChange }: FloorSelectorProp
 
 interface BottomActionsProps {
   onMapEdit?: () => void;
+  onReset?: () => void;
   isEditing?: boolean;
 }
 
-export function BottomActions({ onMapEdit, isEditing }: BottomActionsProps) {
+export function BottomActions({ onMapEdit, onReset, isEditing }: BottomActionsProps) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   const buttons = [
-    { icon: RotateCcw, label: '更换地图' },
+    { icon: RotateCcw, label: '重置底图', onClick: onReset },
     { icon: Eye, label: '默认视角' },
     { icon: Radio, label: '信标管理' },
     { icon: MapPin, label: '室外坐标' },

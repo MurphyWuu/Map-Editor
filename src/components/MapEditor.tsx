@@ -137,6 +137,11 @@ export function MapEditor({
         setHoveredVertex(null);
       }
       if (e.key === 'Enter' && mode === 'path' && pathDrawPoints.length >= 2) {
+        const lastPoint = pathDrawPoints[pathDrawPoints.length - 1];
+        if (!getSnappedPoint(lastPoint)) {
+          setPrompt('路网终点必须在多边形边线或已有路网上 (The end of the path must be on a boundary or existing path).');
+          return;
+        }
         onSaveHistory();
         const pointsArr: number[] = [];
         pathDrawPoints.forEach(p => pointsArr.push(p.x, p.y));
@@ -274,7 +279,7 @@ export function MapEditor({
     height: number 
   }) => {
     const [img] = useImage(logoUrl || '', 'anonymous');
-    const fontSize = logoUrl ? 9 : 10;
+    const fontSize = logoUrl ? 12 : 13;
     
     if (!logoUrl || !img) {
       return (
@@ -1016,37 +1021,52 @@ export function MapEditor({
       const mouse = getRelativePointerPosition();
       const snapped = getSnappedPoint(mouse);
       const point = snapped ? { x: snapped.x, y: snapped.y } : mouse;
-
-      // Finish drawing if clicked on the last point or very close to it
-      if (pathDrawPoints.length > 0) {
-        const lastPoint = pathDrawPoints[pathDrawPoints.length - 1];
-        const dist = Math.sqrt(Math.pow(point.x - lastPoint.x, 2) + Math.pow(point.y - lastPoint.y, 2));
-        if (dist < 10 && pathDrawPoints.length >= 2) {
-          // Finish
-          onSaveHistory();
-          const pointsArr: number[] = [];
-          pathDrawPoints.forEach(p => pointsArr.push(p.x, p.y));
-          onAdd({
-            id: `path-${Date.now()}`,
-            type: 'path',
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-            rotation: 0,
-            fill: 'transparent',
-            points: pointsArr,
-            name: 'Road Network',
-            label: ''
-          });
-          setPathDrawPoints([]);
-          setPrompt('Path added.');
+      
+      // 1. Initial point must be snapped
+      if (pathDrawPoints.length === 0) {
+        if (!snapped) {
+          setPrompt('路网起点必须在多边形边线或已有路网上 (The start of the path must be on a boundary or existing path).');
           return;
         }
+        setPathDrawPoints([point]);
+        setPrompt('起点已设置。点击另一个边界/路网点以结束，或点击空白处添加中间点 (Start set. Click another boundary/path point to finish).');
+        return;
       }
 
+      // 2. Subsequent clicks
+      const lastPoint = pathDrawPoints[pathDrawPoints.length - 1];
+      const dist = Math.sqrt(Math.pow(point.x - lastPoint.x, 2) + Math.pow(point.y - lastPoint.y, 2));
+
+      // Avoid adding redundant points at the same location
+      if (dist < 5) return;
+
+      // Finish drawing if clicked on a snapped point (endpoint check)
+      if (snapped) {
+        onSaveHistory();
+        const allPoints = [...pathDrawPoints, point];
+        const pointsArr: number[] = [];
+        allPoints.forEach(p => pointsArr.push(p.x, p.y));
+        onAdd({
+          id: `path-${Date.now()}`,
+          type: 'path',
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          rotation: 0,
+          fill: 'transparent',
+          points: pointsArr,
+          name: 'Road Network',
+          label: ''
+        });
+        setPathDrawPoints([]);
+        setPrompt('路网已添加 (Path added).');
+        return;
+      }
+
+      // Else it's an intermediate point
       setPathDrawPoints([...pathDrawPoints, point]);
-      setPrompt('绘制路网：点击确认下一个点，点击上一个点结束 (Path: Click next point, click last point to finish).');
+      setPrompt('中间点已设置。点击边界或路网以结束绘制 (Intermediate node set. Click boundary/path to finish).');
       return;
     }
 
@@ -1056,7 +1076,7 @@ export function MapEditor({
   };
 
   const handleShapeClick = (e: any, id: string) => {
-    if (mode === 'add' || id === 'floor') return;
+    if (mode === 'add' || mode === 'path' || id === 'floor') return;
     
     if (mode === 'split') {
       // If a split is already in progress, or if a shape is already selected, ignore clicks on other shapes
@@ -1155,8 +1175,8 @@ export function MapEditor({
         if (selectedIds.length < 2) return '选择多个重叠图形进行合并';
         return '点击上方“合并”按钮开始';
       case 'path':
-        if (pathDrawPoints.length === 0) return '点击画布设置路网起点';
-        return '点击画布增加路网节点，点击末尾节点或双击(Enter)完成';
+        if (pathDrawPoints.length === 0) return '点击多边形边线或已有路网设置起点 (Click a boundary or path to start)';
+        return '点击画布添加中间点，点击末尾已吸附节点结束 (Add intermediate nodes, click a snapped end node to finish)';
     }
     return '';
   };
@@ -1217,9 +1237,9 @@ export function MapEditor({
                   width={shape.width}
                   height={shape.height}
                   fill={shape.fill}
-                  opacity={shape.fill === '#fdfaf4' ? 1 : 0.9}
-                  stroke={selectedIds.includes(shape.id) ? '#6366f1' : (shape.id === 'floor' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.1)')}
-                  strokeWidth={selectedIds.includes(shape.id) ? 2 : 0.4}
+                  opacity={1}
+                  stroke={selectedIds.includes(shape.id) ? '#6366f1' : 'rgba(0,0,0,0.05)'}
+                  strokeWidth={selectedIds.includes(shape.id) ? 2 : 0.5}
                   onClick={(e) => handleShapeClick(e, shape.id)}
                   onTransformEnd={(e) => handleTransformEnd(e, shape.id)}
                   cornerRadius={shape.name === 'Kiosk' ? 100 : 0}
@@ -1239,10 +1259,10 @@ export function MapEditor({
                   <KonvaLine
                     points={shape.points || []}
                     fill={shape.fill}
-                    opacity={shape.type === 'path' ? 0.6 : 0.9}
+                    opacity={1}
                     closed={shape.type !== 'path'}
-                    stroke={selectedIds.includes(shape.id) ? '#6366f1' : (shape.type === 'path' ? '#94a3b8' : 'rgba(0,0,0,0.1)')}
-                    strokeWidth={selectedIds.includes(shape.id) ? (shape.type === 'path' ? 6 : 2) : (shape.type === 'path' ? 4 : 0.4)}
+                    stroke={selectedIds.includes(shape.id) ? '#6366f1' : (shape.type === 'path' ? '#cbd5e1' : 'rgba(0,0,0,0.05)')}
+                    strokeWidth={selectedIds.includes(shape.id) ? (shape.type === 'path' ? 3 : 2) : (shape.type === 'path' ? 1.5 : 0.5)}
                     lineJoin="round"
                     lineCap="round"
                     dash={shape.type === 'path' ? [8, 4] : undefined}

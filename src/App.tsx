@@ -14,44 +14,546 @@ import { EditorMode, Shape } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
 const INITIAL_SHAPES: Shape[] = [
-  // --- Floor / Corridor Base (The off-white paths) ---
-  { id: 'floor', type: 'rect', x: 20, y: 20, width: 1300, height: 1300, rotation: 0, fill: '#fdfaf4', name: 'Floor', label: '' },
-
-  // --- External Grey Anchors ---
-  { id: 'ext-g1', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#d1d5db', name: 'Base', points: [700, 50, 1000, 50, 1000, 600, 850, 500, 750, 400] },
-  { id: 'ext-g2', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#d1d5db', name: 'Base', points: [100, 850, 450, 850, 450, 1150, 100, 1150] },
-
-  // --- Shops Top ---
-  { id: 's-mk', type: 'rect', x: 490, y: 205, width: 100, height: 40, rotation: 0, fill: '#fff200', name: 'Shop', label: 'MICHAEL KORS' },
-  { id: 's-pau', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#67c1cf', name: 'Shop', points: [580, 160, 750, 160, 750, 240, 595, 240], label: 'PINKO' },
-  { id: 's-purp1', type: 'rect', x: 520, y: 140, width: 60, height: 60, rotation: 0, fill: '#7d3f98', name: 'Shop' },
-
-  // --- Left High Cluster ---
-  { id: 's-pan', type: 'rect', x: 280, y: 310, width: 100, height: 70, rotation: 0, fill: '#67c1cf', name: 'Shop', label: 'PANDORA' },
-  { id: 's-swa-bg', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#f9a799', name: 'Shop', points: [385, 305, 480, 305, 480, 380, 400, 380], label: 'SWAROVSKI' },
-  { id: 's-te1', type: 'rect', x: 280, y: 390, width: 100, height: 80, rotation: 0, fill: '#67c1cf', name: 'Shop' },
-
-  // --- Central Island Area ---
-  { id: 's-aig', type: 'rect', x: 515, y: 440, width: 90, height: 60, rotation: 0, fill: '#fff200', name: 'Shop', label: 'AIGLE' },
-  { id: 's-wt', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#67c1cf', name: 'Shop', points: [430, 420, 510, 420, 510, 580, 450, 580, 400, 500], label: 'WOLF TOTEM' },
-  { id: 's-md', type: 'rect', x: 400, y: 620, width: 200, height: 40, rotation: 0, fill: '#f9a799', name: 'Shop', label: 'MARIE DALGAR' },
-
-  // --- Right Side ---
-  { id: 's-ini', type: 'rect', x: 650, y: 320, width: 100, height: 80, rotation: 0, fill: '#67c1cf', name: 'Shop', label: 'initial' },
-  { id: 's-nike', type: 'polygon', x: 0, y: 0, width: 0, height: 0, rotation: 0, fill: '#67c1cf', name: 'Shop', points: [650, 430, 800, 430, 800, 550, 650, 550], label: 'NIKE KICKS LOUNGE' },
-  { id: 's-hey', type: 'rect', x: 615, y: 615, width: 220, height: 50, rotation: 0, fill: '#7d3f98', name: 'Shop', label: '喜茶', logo: 'https://avatars.githubusercontent.com/u/45314051?s=280&v=4' },
-
-  // --- Bottom Line ---
-  { id: 's-sb', type: 'rect', x: 195, y: 800, width: 120, height: 60, rotation: 0, fill: '#7d3f98', name: 'Shop', label: '星巴克' },
-  { id: 's-dys1', type: 'rect', x: 320, y: 800, width: 130, height: 50, rotation: 0, fill: '#fff200', name: 'Shop', label: '戴森' },
-  { id: 's-dys2', type: 'rect', x: 455, y: 800, width: 130, height: 35, rotation: 0, fill: '#67c1cf', name: 'Shop' },
-  { id: 's-pm', type: 'rect', x: 635, y: 800, width: 60, height: 50, rotation: 0, fill: '#f47920', name: 'Shop', label: 'POP MART' },
-  { id: 's-cas', type: 'rect', x: 635, y: 670, width: 80, height: 110, rotation: 0, fill: '#67c1cf', name: 'Shop', label: 'Cassile' },
+  {
+    "id": "floor",
+    "type": "rect",
+    "x": 0,
+    "y": 0,
+    "width": 2200,
+    "height": 1600,
+    "rotation": 0,
+    "fill": "#ffffff",
+    "name": "Floor",
+    "label": ""
+  },
+  {
+    "id": "s-l1",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#e2e8f0",
+    "name": "Shop",
+    "points": [
+      200,
+      200,
+      480,
+      200,
+      480,
+      450,
+      280,
+      450,
+      200,
+      450
+    ],
+    "label": "空铺"
+  },
+  {
+    "id": "s-l2",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#a0bfa0",
+    "name": "Shop",
+    "points": [
+      200,
+      500,
+      480,
+      500,
+      480,
+      950,
+      200,
+      950
+    ],
+    "label": "米可"
+  },
+  {
+    "id": "s-l3",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#7da3da",
+    "name": "Shop",
+    "points": [
+      200,
+      1000,
+      480,
+      1000,
+      480,
+      1350,
+      200,
+      1350
+    ],
+    "label": "萃华珠宝"
+  },
+  {
+    "id": "s-ct1",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#8eadde",
+    "name": "Shop",
+    "points": [
+      550,
+      250,
+      800,
+      250,
+      800,
+      400,
+      720,
+      500,
+      550.9919148776077,
+      499.07898108118604
+    ],
+    "label": "TIM 茶"
+  },
+  {
+    "id": "s-ct2",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#abc2ab",
+    "name": "Shop",
+    "points": [
+      820,
+      250,
+      1050,
+      250,
+      1065.3492588702286,
+      549.96552353792,
+      850,
+      550,
+      821.3975702858904,
+      400.04755382979636
+    ],
+    "label": "半丘"
+  },
+  {
+    "id": "s-ct3",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#e9cc95",
+    "name": "Shop",
+    "points": [
+      1089.7425468511453,
+      250.02748373771956,
+      1350,
+      250,
+      1346.3651980021666,
+      545.9774910549236,
+      1106.3411409684168,
+      546.9671641437576
+    ],
+    "label": "君颂"
+  },
+  {
+    "id": "s-core",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#6293d8",
+    "name": "Shop",
+    "points": [
+      620,
+      600,
+      1054.2078368532357,
+      598.6298288888848,
+      1280,
+      680,
+      1260.0501339845634,
+      830.7014470140897,
+      1050,
+      830,
+      1050,
+      750,
+      620,
+      750
+    ],
+    "label": "优选超市"
+  },
+  {
+    "id": "s-c1",
+    "type": "rect",
+    "x": 620,
+    "y": 850,
+    "width": 140,
+    "height": 120,
+    "rotation": 0,
+    "fill": "#e8d4a0",
+    "name": "Shop",
+    "label": "霸王茶姬"
+  },
+  {
+    "id": "s-c2",
+    "type": "rect",
+    "x": 780,
+    "y": 850,
+    "width": 160,
+    "height": 120,
+    "rotation": 0,
+    "fill": "#a6c0e8",
+    "name": "Shop",
+    "label": "Lady女装"
+  },
+  {
+    "id": "s-r1",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#7da3da",
+    "name": "Shop",
+    "points": [
+      1475.2335700389092,
+      287.52114060672744,
+      1678.858244856652,
+      284.8775870742075,
+      1750,
+      450,
+      1726.1166733902269,
+      653.8884477835585,
+      1472.5541674765516,
+      597.9088564532108
+    ],
+    "label": "蔚来汽车"
+  },
+  {
+    "id": "s-r2",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#8eadde",
+    "name": "Shop",
+    "points": [
+      1453.7717899928343,
+      716.7054871088772,
+      1708.6088106759883,
+      765.9698563271189,
+      1657.0415228974691,
+      1022.3945489815504,
+      1401.6020027813843,
+      966.9609616110882
+    ],
+    "label": "喜茶"
+  },
+  {
+    "id": "s-r3",
+    "type": "polygon",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#e8d4a0",
+    "name": "Shop",
+    "points": [
+      1398.1526858731222,
+      1002.5914657450523,
+      1650,
+      1050,
+      1600,
+      1300,
+      1350,
+      1250
+    ],
+    "label": "空铺"
+  },
+  {
+    "id": "s-b1",
+    "type": "rect",
+    "x": 550,
+    "y": 1100,
+    "width": 180,
+    "height": 250,
+    "rotation": 0,
+    "fill": "#a0bfa0",
+    "name": "Shop",
+    "label": "欢聚"
+  },
+  {
+    "id": "s-b2",
+    "type": "rect",
+    "x": 750,
+    "y": 1100,
+    "width": 220,
+    "height": 250,
+    "rotation": 0,
+    "fill": "#5584e0",
+    "name": "Shop",
+    "label": "华为"
+  },
+  {
+    "id": "s-b3",
+    "type": "rect",
+    "x": 990,
+    "y": 1100,
+    "width": 200,
+    "height": 250,
+    "rotation": 0,
+    "fill": "#e9cc95",
+    "name": "Shop",
+    "label": "名媛.棠里"
+  },
+  {
+    "id": "st-1",
+    "type": "rect",
+    "x": 1357.1913919441165,
+    "y": 249.83857172043474,
+    "width": 40,
+    "height": 100,
+    "rotation": 0,
+    "fill": "#cbd5e1",
+    "name": "Stairs",
+    "label": "楼梯"
+  },
+  {
+    "id": "st-2",
+    "type": "polygon",
+    "x": 579.5437115409053,
+    "y": 602.2920624234378,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "#cbd5e1",
+    "name": "Elevator",
+    "label": "电梯",
+    "points": [
+      -23.27565341636887,
+      -0.04799308817825931,
+      30,
+      0,
+      30,
+      60,
+      -22.704013376549256,
+      59.381826367469216
+    ]
+  },
+  {
+    "id": "st-3",
+    "type": "rect",
+    "x": 1345.936295559092,
+    "y": 1285.5037815121507,
+    "width": 60,
+    "height": 60,
+    "rotation": 0,
+    "fill": "#cbd5e1",
+    "name": "WC",
+    "label": "卫生间"
+  },
+  {
+    "id": "p-h1",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "none",
+    "name": "Path",
+    "points": [
+      518.3451429800306,
+      219.03210901317775,
+      1800,
+      220
+    ]
+  },
+  {
+    "id": "p-h2",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "none",
+    "name": "Path",
+    "points": [
+      517.4092592589858,
+      566.6401333139169,
+      1386.571917434938,
+      571.3418718348677
+    ]
+  },
+  {
+    "id": "p-h3",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "none",
+    "name": "Path",
+    "points": [
+      518.4623749261665,
+      1047.1639643496237,
+      1323.3320807999119,
+      1044.5307454884323
+    ]
+  },
+  {
+    "id": "p-v1",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "none",
+    "name": "Path",
+    "points": [
+      520,
+      150,
+      520,
+      1400
+    ]
+  },
+  {
+    "id": "p-v2",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "none",
+    "name": "Path",
+    "points": [
+      1435.7597047189165,
+      221.18097272170397,
+      1277.7832739183382,
+      1349.6894725481627
+    ]
+  },
+  {
+    "id": "p-v3",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "none",
+    "name": "Path",
+    "points": [
+      1067.824535616958,
+      217.86408643541188,
+      1087.5510658223054,
+      567.84577228811
+    ]
+  },
+  {
+    "id": "path-1779155685850",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "transparent",
+    "points": [
+      998.2055331874021,
+      1043.7238696240213,
+      998.539480694933,
+      799.7544668580449,
+      519.4649156001699,
+      801.6256778418922
+    ],
+    "name": "Road Network",
+    "label": ""
+  },
+  {
+    "id": "path-1779155701984",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "transparent",
+    "points": [
+      999.0749262329626,
+      881.2040995636205,
+      1344.2239653205688,
+      879.4659202046857
+    ],
+    "name": "Road Network",
+    "label": ""
+  },
+  {
+    "id": "path-1779155751288",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "transparent",
+    "points": [
+      1379.397866302311,
+      630.1176621244491,
+      1786.9772785374887,
+      716.0058566795848
+    ],
+    "name": "Road Network",
+    "label": ""
+  },
+  {
+    "id": "path-1779155786214",
+    "type": "path",
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "rotation": 0,
+    "fill": "transparent",
+    "points": [
+      1720.5614663134722,
+      128.95267705068582,
+      1834.3889242861235,
+      392.1586592015815,
+      1787.3337946685442,
+      717.185328154474,
+      1661.8219623275024,
+      1344.3494820354006
+    ],
+    "name": "Road Network",
+    "label": ""
+  }
 ];
 
 export default function App() {
   const [mode, setMode] = useState<EditorMode>('select');
-  const [shapes, setShapes] = useState<Shape[]>(INITIAL_SHAPES);
+  const [shapes, setShapes] = useState<Shape[]>(() => {
+    const saved = localStorage.getItem('map_editor_shapes');
+    return saved ? JSON.parse(saved) : INITIAL_SHAPES;
+  });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [prompt, setPrompt] = useState<string>('Welcome to MAP EDITOR DEMO. Select a tool or an object to begin.');
 
@@ -76,6 +578,10 @@ export default function App() {
       };
     });
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('map_editor_shapes', JSON.stringify(shapes));
+  }, [shapes]);
 
   const handleUndo = useCallback(() => {
     setHistory((prev) => {
@@ -193,6 +699,32 @@ export default function App() {
   const [currentFloor, setCurrentFloor] = useState('L1');
   const [isEditing, setIsEditing] = useState(false);
 
+  const handleExitEdit = () => {
+    setIsEditing(false);
+    setMode('select');
+    
+    // Log and Copy to clipboard if possible
+    const configString = JSON.stringify(shapes, null, 2);
+    console.log('--- EXPORTED MAP CONFIG ---');
+    console.log(configString);
+    console.log('---------------------------');
+    
+    try {
+      navigator.clipboard.writeText(configString);
+      setPrompt('地图配置已复制到剪贴板！请将其发送给 AI 以将其设为永久默认。');
+    } catch (err) {
+      setPrompt('地图配置已打印到浏览器控制台 (Console)。');
+    }
+  };
+
+  const handleResetToDefault = () => {
+    if (window.confirm('确定要恢复到默认底图吗？您当前的所有修改将被清除。')) {
+      setShapes(INITIAL_SHAPES);
+      localStorage.removeItem('map_editor_shapes');
+      setPrompt('已恢复到默认底图。');
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen bg-[#f1f5f9] text-slate-800 overflow-hidden font-sans">
       <Sidebar />
@@ -211,15 +743,22 @@ export default function App() {
                 canUndo={history.past.length > 0}
                 canRedo={history.future.length > 0}
                 isEditing={isEditing}
+                onSave={handleExitEdit}
                 onExit={() => {
-                  setPrompt(isEditing ? 'Changes relative to original state have been handled.' : 'Edit mode active.');
+                  setIsEditing(false);
+                  setMode('select');
                 }}
               />
             </div>
           </div>
 
           <FloorSelector currentFloor={currentFloor} onFloorChange={setCurrentFloor} />
-          <BottomActions isEditing={isEditing} onMapEdit={() => setIsEditing(!isEditing)} />
+          <BottomActions 
+            isEditing={isEditing} 
+            onMapEdit={() => setIsEditing(!isEditing)} 
+            onReset={handleResetToDefault}
+          />
+
           
           <MapEditor
             mode={mode}
@@ -242,7 +781,7 @@ export default function App() {
           )}
 
           <AnimatePresence>
-            {selectedShape && (
+            {selectedShape && mode === 'select' && (
               <PropertiesPanel 
                 selectedShape={selectedShape} 
                 onUpdate={handleUpdateShape}
